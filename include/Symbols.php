@@ -1,10 +1,10 @@
 <?php
-/** 
+/**
  * Syntax/Generator tree classes and supporting clases. Language definition:
- *  expression  -> ( ( literal | alt | group | class | escape ) [ repeatition ] )*
- *  alternation -> "[" literal | class | escape "]"
+ *  expression  -> ( ( literal | alternation | group | class | escape ) [ repeatition ] )*
+ *  alternation -> "[" literal | class | escape | group "]"
  *  repeatition -> "{" alpha [ "," alpha ] "}"
- *  group       -> "(" expression ")" 
+ *  group       -> "(" expression ")"
  *  special     -> "{" "}" "[" "]" "(" ")" "\"
  *  escape      -> "\" special
  *  class       -> "\" ( "w" | "d" )
@@ -18,6 +18,10 @@ require_once 'SidewaysIterator.php';
 
 class ParseException extends Exception {
 }
+
+class EmptyExpressionException extends Exception {
+}
+
 
 /**
  * Abstract base class for all symbols.
@@ -42,16 +46,16 @@ class Characters {
  */
 class Expression extends Symbol implements IteratorAggregate {
   private $childs = [];
-  
+
   public function __construct($childs) {
     debug(__METHOD__ . print_r($childs, true));
     $this->childs = $childs;
   }
-  
+
   public function getIterator() {
     return new SidewaysIterator($this->childs, function($n){return join("", $n);});
   }
-  
+
   public static function build(StringIterator $p) {
     $nodes  = [];
     $childSymbols = [
@@ -61,7 +65,7 @@ class Expression extends Symbol implements IteratorAggregate {
       "Alternation",
       "GroupExpression",
     ];
-    
+
     while($p->valid()) {
       $hit = false;
       $mark = $p->pos();
@@ -90,56 +94,59 @@ class Expression extends Symbol implements IteratorAggregate {
         break;
       }
     }
+    if(empty($nodes)) {
+      throw new EmptyExpressionException("Empty Expression");
+    }
     return new Expression($nodes);
   }
 }
 
 
 /**
- * 
+ *
  */
 class GroupExpression extends Symbol implements IteratorAggregate {
   private $child = null;
-  
+
   public function __construct(Expression $child) {
     debug(__METHOD__);
     $this->child = $child;
   }
-  
+
   public function getIterator() {
     return $this->child->getIterator();
   }
 
-  public static function build(StringIterator $p) {    
+  public static function build(StringIterator $p) {
     $child = null;
     if($p->current() != "(") {
       throw new ParseException("Expected '('. Found {$p->current()}");
     }
     $p->next();
-    
+
     $child = Expression::build($p);
-    
+
     if($p->current() != ")") {
       throw new ParseException("Unterminated Expression Group");
     }
     $p->next();
-    
+
     return new GroupExpression($child);
   }
 }
 
 
-/** 
- * 
+/**
+ *
  */
 class Alternation implements IteratorAggregate {
   private $childs = [];
-  
-  public function __construct(array $childs = []) { 
+
+  public function __construct(array $childs = []) {
     debug(__METHOD__);
     $this->childs = $childs;
-  }  
-  
+  }
+
   public function getIterator() {
     $it = new AppendIterator();
     foreach($this->childs as $child) {
@@ -147,20 +154,21 @@ class Alternation implements IteratorAggregate {
     }
     return $it;
   }
-  
+
   public static function build(StringIterator $p) {
     $nodes  = [];
     $childSymbols = [
       "Literal",
       "CharacterClass",
       "EscapeClass",
+      "GroupExpression"
     ];
 
     if($p->current() != "[") {
       throw new ParseException("Expected '['. Found {$p->current()}");
     }
     $p->next();
-    
+
     while($p->valid() && $p->current() != "]") {
       $hit = false;
       $mark = $p->pos();
@@ -180,7 +188,7 @@ class Alternation implements IteratorAggregate {
         throw new ParseException("Invalid Alternation Expression");
       }
     }
-    
+
     if($p->current() != "]") {
       throw new ParseException("Unterminated Alternation Expression");
     }
@@ -188,7 +196,7 @@ class Alternation implements IteratorAggregate {
       throw new ParseException("Found empty Alternation");
     }
     $p->next();
-    
+
     return new Alternation($nodes);
   }
 }
@@ -201,14 +209,14 @@ class Repeatition implements IteratorAggregate {
   private $node = null;
   private $min = null;
   private $max = null;
-  
+
   public function __construct($node, $min, $max = null) {
     debug(__METHOD__ . "(.,$min, $max)");
     $this->min = $min;
     $this->max = $max ? $max: $min;
     $this->node = $node;
   }
-  
+
   public function getIterator() {
     $itAll = [];
     for($i = $this->min; $i <= $this->max; $i++) {
@@ -224,7 +232,7 @@ class Repeatition implements IteratorAggregate {
     }
     return $itFinal;
   }
-  
+
   public static function build(StringIterator $p, $node) {
     if($p->current() != "{") {
       throw new ParseException("Expected '{'. Found {$p->current()}");
@@ -239,10 +247,10 @@ class Repeatition implements IteratorAggregate {
     else {
       throw new ParseException("Invalid Repeatition Expression");
     }
-    
+
     return new Repeatition($node, $min, $max);
   }
-} 
+}
 
 
 /**
@@ -250,19 +258,19 @@ class Repeatition implements IteratorAggregate {
  */
 class EscapeClass implements IteratorAggregate {
   private $char;
-  
+
   public function __construct($char) {
-    debug(__METHOD__ . "($char)");  
+    debug(__METHOD__ . "($char)");
     $this->char = $char;
   }
 
   public function getIterator() {
     return new ArrayIterator([$this->char]);
   }
-  
+
   public static function build(StringIterator $p) {
     $char = null;
-    
+
     if($p->current() != '\\') {
       throw new ParseException("Expected \\.");
     }
@@ -273,7 +281,7 @@ class EscapeClass implements IteratorAggregate {
     }
     $p->next();
     return new EscapeClass($char);
-  } 
+  }
 }
 
 
@@ -283,12 +291,12 @@ class EscapeClass implements IteratorAggregate {
 class CharacterClass implements IteratorAggregate {
   public $cls;
   public static $classes = ['d', 'w'];
-  
+
   public function __construct($cls) {
-    debug(__METHOD__ . "($cls)");  
+    debug(__METHOD__ . "($cls)");
     $this->cls = $cls;
   }
-  
+
   public function getIterator() {
     switch($this->cls) {
       case 'w':
@@ -297,10 +305,10 @@ class CharacterClass implements IteratorAggregate {
         return new ArrayIterator(Characters::$digit);
     }
   }
-  
+
   public static function build(StringIterator $p) {
     $char = null;
-    
+
     if($p->current() != '\\') {
       throw new ParseException("Expected \\.");
     }
@@ -311,7 +319,7 @@ class CharacterClass implements IteratorAggregate {
     }
     $p->next();
     return new CharacterClass($class);
-  } 
+  }
 }
 
 
@@ -320,22 +328,22 @@ class CharacterClass implements IteratorAggregate {
  */
 class Literal implements IteratorAggregate {
   public $char = null;
-  
+
   public function __construct($char) {
     debug(__METHOD__ . "($char)");
     $this->char = $char;
   }
-  
+
   public function getIterator() {
     return new ArrayIterator([$this->char]);
   }
-  
+
   public static function build(StringIterator $p) {
     $char = $p->current();
     if(in_array($char, Characters::$special)) {
      throw new ParseException("Character {$char} not a legal literal");
     }
-    $p->next();    
+    $p->next();
     return new Literal($char);
   }
 }

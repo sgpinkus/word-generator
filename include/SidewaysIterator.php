@@ -14,17 +14,17 @@ class SidewaysIterator implements Iterator
   public function __construct($nodes = [], $mapper = null) {
     foreach($nodes as $node) {
       if($node instanceof IteratorAggregate) {
-        debug(__METHOD__ . " (IteratorAggregate)");     
+        debug(__METHOD__ . " (IteratorAggregate)");
         $this->nodes[] = $node->getIterator();
-      }      
+      }
       else if(is_array($node)) {
         debug(__METHOD__ . " (Array)");
         $this->nodes[] = new ArrayIterator($node);
       }
       else if($node instanceof Traversable) {
-        debug(__METHOD__ . " (Traversable)");            
+        debug(__METHOD__ . " (Traversable)");
         $this->nodes[] = $node;
-      }      
+      }
       else {
         throw new SidewaysIteratorException("Invalid argument to constructor. Non iterable item found");
       }
@@ -37,7 +37,7 @@ class SidewaysIterator implements Iterator
     }
     $this->init();
   }
-  
+
   private function init() {
     $this->valid = true;
     $this->current = null;
@@ -71,7 +71,7 @@ class SidewaysIterator implements Iterator
       $node->next();
       if($node->valid()) {
         $valid = true;
-        $this->updateCurrent(); 
+        $this->updateCurrent();
         break;
       }
       else {
@@ -84,16 +84,16 @@ class SidewaysIterator implements Iterator
   public function valid() {
     return $this->valid;
   }
-  
+
   public function updateCurrent() {
-    $this->current = [];  
+    $this->current = [];
     for($i = 0; $i < sizeof($this->nodes); $i++) {
       $node = $this->nodes[$i];
       $this->current[] = $node->current();
     }
     $this->updateKey();
   }
-  
+
   public function updateKey() {
     $key = 0;
     $len = sizeof($this->nodes);
@@ -108,4 +108,3 @@ class SidewaysIterator implements Iterator
 
 class SidewaysIteratorException extends Exception {
 }
-

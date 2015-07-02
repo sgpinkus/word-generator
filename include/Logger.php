@@ -10,17 +10,17 @@ class Logger {
   const LOG_WARN = 3;
   const LOG_ERROR = 4;
   private $lvl  = self::LOG_INFO;
-  
+
   private static $instance = null;
-  
-  
+
+
   private function __construct() {
   }
-  
+
   public static function logger() {
     return self::$instance ? self::$instance : new Logger();
   }
-  
+
   public function debug($s, $caller = null) {
     $caller = $caller ? $caller : debug_backtrace()[1];
     $this->log($s, Logger::LOG_DEBUG, $caller);
@@ -45,11 +45,11 @@ class Logger {
     $caller = $caller ? $caller : debug_backtrace()[1];
     $this->log($s, Logger::LOG_ERROR, $caller);
   }
-  
+
   public function format($s, $lvl, $file, $function, $line) {
     return sprintf("%s::%s::%s::%s: '%s'\n", $lvl, $file, $function, $line, $s);
   }
-  
+
   public function log($s, $lvl, $caller = null)  {
     $caller = $caller ? $caller : debug_backtrace()[1];
     extract($caller);

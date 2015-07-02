@@ -11,13 +11,19 @@ if($argc != 2) {
   usage();
   exit(1);
 }
-$n = Expression::build(new StringIterator($argv[1]));
+$n = [];
+
+try {
+  $n = Expression::build(new StringIterator($argv[1]));
+}
+catch(EmptyExpressionException $e) {
+  fprintf(STDERR, "WARNING: Empty Expression\n");
+}
 
 foreach($n as $v) {
   print $v . "\n";
 }
 
 function usage() {
-  print "Usage: generator.php <expression>\n";
+  fprintf(STDERR, "Usage: generator.php <expression>\n");
 }
-
