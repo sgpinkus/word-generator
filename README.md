@@ -3,4 +3,4 @@ A simple language generator for finite languages specified with a limited regula
 
 # Usage
 
-  php generator.php "[Pp]([Aa][Ss]{1,2}){0,1}[Ww]([oO0][rR]){0,1}[dD]s{0,1}\d{0,1}"
+    php generator.php "[Pp]([Aa][Ss]{1,2}){0,1}[Ww]([oO0][rR]){0,1}[dD]s{0,1}\d{0,1}"
