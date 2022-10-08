@@ -1,6 +1,7 @@
 <?php
 /**
  * Syntax/Generator tree classes and supporting clases. Language definition:
+ *
  *  expression  -> ( ( literal | alternation | group | class | escape ) [ repeatition ] )*
  *  alternation -> "[" literal | class | escape | group "]"
  *  repeatition -> "{" alpha [ "," alpha ] "}"
@@ -8,9 +9,10 @@
  *  special     -> "{" "}" "[" "]" "(" ")" "\"
  *  escape      -> "\" special
  *  class       -> "\" ( "w" | "d" )
- *  literal     -> ...
- *  alpha       -> ...
+ *  literal     -> literally-a-literal
+ *  alpha       -> literally-an-alpha-numeric-literal
  *
+ * The root of the AST begins with Expression class.
  * @see Expression.
  */
 require_once 'Logger.php';

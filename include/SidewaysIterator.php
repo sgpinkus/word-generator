@@ -1,9 +1,10 @@
 <?php
-/**
- * In the absence of yeild() in <= PHP 5.4.
- */
 require_once 'Logger.php';
 
+/**
+ * In the absence of yield() in <= PHP 5.4.
+ * Implements an Iterator that Iterates over the Iterators in $nodes.
+ */
 class SidewaysIterator implements Iterator
 {
   private $nodes = [];
@@ -21,7 +22,7 @@ class SidewaysIterator implements Iterator
         debug(__METHOD__ . " (Array)");
         $this->nodes[] = new ArrayIterator($node);
       }
-      else if($node instanceof Traversable) {
+      else if($node instanceof Iterator) { # TODO: Should only require Traversable.
         debug(__METHOD__ . " (Traversable)");
         $this->nodes[] = $node;
       }
@@ -85,6 +86,10 @@ class SidewaysIterator implements Iterator
     return $this->valid;
   }
 
+  /**
+   * The Iterator->current() value is an array containing the current value from
+   * each Iterator in $nodes.
+   */
   public function updateCurrent() {
     $this->current = [];
     for($i = 0; $i < sizeof($this->nodes); $i++) {
@@ -94,12 +99,15 @@ class SidewaysIterator implements Iterator
     $this->updateKey();
   }
 
+  /**
+   * Derive a key from the current value - can't recall why this complicated.
+   */
   public function updateKey() {
     $key = 0;
     $len = sizeof($this->nodes);
     for($i = 0; $i < $len; $i++) {
       $node = $this->nodes[$i];
-      $base = sizeof($node);
+      $base = $node->key(); # TODO: Assumes key is an int
       $key += $node->key()*pow($base, $len - $i - 1);
     }
     $this->key = (int)$key;
