@@ -1,7 +1,7 @@
 # Overview
 A simple language generator for finite languages specified with a limited regular expression language. 
 Written in PHP. Written as a simple learning aid re the [Interpreter Pattern](https://en.wikipedia.org/wiki/Interpreter_pattern). 
-See example below, and [Symbols.php](include/Symbols.php) for the syntax of legal expressions.
+See example below.
 
 # Usage
 
